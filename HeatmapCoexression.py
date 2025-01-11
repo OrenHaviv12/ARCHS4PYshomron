@@ -1,48 +1,79 @@
-
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import os
 
 
-def generate_heatmap(csv_file, save_path):
+def generate_clustermap_and_matrix(csv_file, clustermap_save_path, matrix_save_path, cmap="Spectral"):
     """
-    Generate a heatmap from the co-expression results CSV file.
+    Generate a clustermap from the co-expression results CSV file and save the correlation matrix.
 
     Parameters:
         csv_file (str): Path to the CSV file containing co-expression data.
-        save_path (str): Path to save the heatmap image.
+        clustermap_save_path (str): Path to save the clustermap image.
+        matrix_save_path (str): Path to save the correlation matrix CSV.
+        cmap (str): Colormap for the clustermap (default: "Spectral").
     """
     try:
-        # Load co-expression data
+        # Check if file exists
+        if not os.path.exists(csv_file):
+            raise FileNotFoundError(f"The file {csv_file} does not exist. Please verify the path.")
+
+        # Load the co-expression data
         coexpression_data = pd.read_csv(csv_file)
 
-        # Ensure the required columns exist
-        if 'Target Gene' not in coexpression_data.columns or 'Coexpression' not in coexpression_data.columns:
-            raise ValueError("CSV file must contain 'Target Gene' and 'Coexpression' columns.")
+        # Debug: Print the first few rows and column names for verification
+        print("Loaded Co-expression Data:")
+        print(coexpression_data.head())
+        print(f"Columns: {list(coexpression_data.columns)}")
 
-        # Pivot data to prepare for heatmap
-        heatmap_data = coexpression_data.pivot_table(values='Coexpression', index='Target Gene')
+        # Ensure required columns exist
+        required_columns = {'Primary Gene', 'Target Gene', 'Coexpression'}
+        if not required_columns.issubset(coexpression_data.columns):
+            raise ValueError(f"CSV file must contain columns: {required_columns}")
 
-        # Generate the heatmap
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(heatmap_data, annot=True, cmap="RdBu_r", center=0, fmt=".2f",
-                    cbar_kws={"label": "Coexpression Coeff."})
-        plt.title("Gene Co-expression Heatmap")
-        plt.xlabel("Genes")
-        plt.ylabel("Target Gene")
+        # Pivot the data to prepare for heatmap/clustermap
+        heatmap_data = coexpression_data.pivot_table(
+            values='Coexpression',
+            index='Target Gene',
+            columns='Primary Gene'
+        )
 
-        # Save the heatmap as an image
-        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        # Save the correlation matrix as a CSV
+        heatmap_data.to_csv(matrix_save_path)
+        print(f"Correlation matrix successfully saved to: {matrix_save_path}")
+
+        # Generate the clustermap with hierarchical clustering
+        sns.clustermap(
+            heatmap_data,
+            cmap=cmap,
+            figsize=(14, 12),
+            annot=False,
+            cbar_kws={"label": "Coexpression Coefficient"},
+            center=0,
+            xticklabels=True,
+            yticklabels=True,
+            linewidths=0.5,
+            dendrogram_ratio=(0.2, 0.2),  # Adjust the size of dendrograms
+        )
+        plt.title("Gene Co-expression Clustermap", fontsize=16)
+        plt.savefig(clustermap_save_path, dpi=300, bbox_inches="tight")
         plt.show()
-        print(f"Heatmap successfully saved to: {save_path}")
+        print(f"Clustermap successfully saved to: {clustermap_save_path}")
+
     except Exception as e:
-        print(f"Error generating heatmap: {e}")
+        print(f"Error generating clustermap: {e}")
 
 
 if __name__ == "__main__":
-    # Specify paths
-    csv_file = r"C:\Users\orenh\PycharmProjects\pythonProject\coexpression_results.csv"
-    heatmap_save_path = r"C:\Users\orenh\PycharmProjects\pythonProject\heatmapcoexpression.png"
+    # Specify the path to the co-expression CSV file
+    csv_file = r"C:\Users\orenh\PycharmProjects\pythonProject5\coexpression_results.csv"  # Adjust the path as needed
 
-    # Generate the heatmap
-    generate_heatmap(csv_file, heatmap_save_path)
+    # Specify the path to save the clustermap image
+    clustermap_save_path = r"C:\Users\orenh\PycharmProjects\pythonProject5\clustermap_coexpression_spectral.png"
+
+    # Specify the path to save the correlation matrix
+    matrix_save_path = r"C:\Users\orenh\PycharmProjects\pythonProject5\correlation_matrix_spectral.csv"
+
+    # Generate the clustermap and save the matrix
+    generate_clustermap_and_matrix(csv_file, clustermap_save_path, matrix_save_path, cmap="Spectral")
